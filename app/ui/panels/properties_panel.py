@@ -1,20 +1,14 @@
-"""
-app.ui.panels.properties_panel
-================================
-Right dock panel. Displays metadata for whichever file is currently active
-in the workspace: file identity (name, size, modified date, engine, active
-sheet), row-level stats (duplicate rows, blank cells), and a full per-column
-statistics table (dtype, null %, unique %, duplicate %, min/max for numeric
-columns, example values).
-"""
-
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFormLayout,
+    QFrame,
     QGroupBox,
+    QHBoxLayout,
     QHeaderView,
     QLabel,
+    QScrollArea,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -31,88 +25,129 @@ COLUMN_HEADERS = [
     "Duplicate %",
     "Min",
     "Max",
-    "Example Values",
+    "Samples",
 ]
+
+SECTION_STYLE = """
+QFrame#propSection {
+    background-color: #252526;
+    border: 1px solid #3c3c3c;
+    border-radius: 4px;
+    margin: 0;
+}
+"""
+
+
+class _Section(QFrame):
+    def __init__(self, title: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("propSection")
+        self.setStyleSheet(SECTION_STYLE)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setSpacing(6)
+
+        header = QLabel(title)
+        header.setStyleSheet("color: #969696; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; border: none; background: transparent;")
+        layout.addWidget(header)
+
+        self.content = QVBoxLayout()
+        self.content.setSpacing(4)
+        layout.addLayout(self.content)
+
+    def add_row(self, label: str, value: str) -> None:
+        row = QHBoxLayout()
+        row.setSpacing(8)
+        lbl = QLabel(label)
+        lbl.setStyleSheet("color: #969696; font-size: 11px; border: none; background: transparent;")
+        lbl.setFixedWidth(90)
+        row.addWidget(lbl)
+        val = QLabel(value)
+        val.setStyleSheet("color: #cccccc; font-size: 11px; border: none; background: transparent;")
+        val.setWordWrap(True)
+        row.addWidget(val, 1)
+        self.content.addLayout(row)
 
 
 class PropertiesPanel(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
 
-        self._identity_box = QGroupBox("Selected File Information")
-        self._file_name_label = QLabel("-")
-        self._sheet_label = QLabel("-")
-        self._rows_label = QLabel("-")
-        self._cols_label = QLabel("-")
-        self._size_label = QLabel("-")
-        self._modified_label = QLabel("-")
-        self._memory_label = QLabel("-")
-        self._engine_label = QLabel("-")
+        self._sections: list[_Section] = []
 
-        identity_form = QFormLayout()
-        identity_form.addRow("File:", self._file_name_label)
-        identity_form.addRow("Active Sheet:", self._sheet_label)
-        identity_form.addRow("Rows:", self._rows_label)
-        identity_form.addRow("Columns:", self._cols_label)
-        identity_form.addRow("File Size:", self._size_label)
-        identity_form.addRow("Last Modified:", self._modified_label)
-        identity_form.addRow("Memory Usage:", self._memory_label)
-        identity_form.addRow("Load Engine:", self._engine_label)
-        self._identity_box.setLayout(identity_form)
+        content = QWidget()
+        self._layout = QVBoxLayout(content)
+        self._layout.setContentsMargins(8, 8, 8, 8)
+        self._layout.setSpacing(8)
+        self._layout.addStretch()
 
-        self._quality_box = QGroupBox("Data Quality")
-        self._duplicate_rows_label = QLabel("-")
-        self._blank_cells_label = QLabel("-")
-        quality_form = QFormLayout()
-        quality_form.addRow("Duplicate Rows:", self._duplicate_rows_label)
-        quality_form.addRow("Blank Cells:", self._blank_cells_label)
-        self._quality_box.setLayout(quality_form)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(content)
+        scroll.setFrameShape(QScrollArea.NoFrame)
 
-        self._columns_table = QTableWidget(0, len(COLUMN_HEADERS))
-        self._columns_table.setHorizontalHeaderLabels(COLUMN_HEADERS)
-        self._columns_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self._columns_table.setEditTriggers(QTableWidget.NoEditTriggers)
-
-        layout = QVBoxLayout(self)
-        layout.addWidget(self._identity_box)
-        layout.addWidget(self._quality_box)
-        layout.addWidget(QLabel("Column Statistics"))
-        layout.addWidget(self._columns_table)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.addWidget(scroll)
 
         self.clear()
 
     def clear(self) -> None:
-        self._file_name_label.setText("No file selected")
-        for label in (
-            self._sheet_label,
-            self._rows_label,
-            self._cols_label,
-            self._size_label,
-            self._modified_label,
-            self._memory_label,
-            self._engine_label,
-            self._duplicate_rows_label,
-            self._blank_cells_label,
-        ):
-            label.setText("-")
-        self._columns_table.setRowCount(0)
+        self._clear_sections()
+        empty = QLabel("No file selected")
+        empty.setStyleSheet("color: #555555; font-size: 12px; padding: 24px 8px;")
+        empty.setAlignment(Qt.AlignCenter)
+        self._layout.insertWidget(0, empty)
+        self._empty_label = empty
+
+    def _clear_sections(self) -> None:
+        if hasattr(self, "_empty_label"):
+            self._empty_label.deleteLater()
+        for s in self._sections:
+            self._layout.removeWidget(s)
+            s.deleteLater()
+        self._sections.clear()
+
+    def _add_section(self, title: str) -> _Section:
+        s = _Section(title)
+        self._layout.insertWidget(self._layout.count() - 1, s)
+        self._sections.append(s)
+        return s
 
     def show_workbook(self, handle: WorkbookHandle) -> None:
-        self._file_name_label.setText(handle.display_name)
-        self._sheet_label.setText(f"{handle.active_sheet}  ({handle.sheet_count} sheet(s) total)")
-        self._rows_label.setText(f"{handle.row_count:,}")
-        self._cols_label.setText(str(handle.column_count))
-        self._size_label.setText(handle.file_size_display)
-        self._modified_label.setText(
-            handle.last_modified.strftime("%Y-%m-%d %H:%M") if handle.last_modified else "-"
-        )
-        self._memory_label.setText(f"{handle.memory_usage_mb} MB")
-        self._engine_label.setText(handle.engine_used)
+        self._clear_sections()
 
-        self._duplicate_rows_label.setText(f"{handle.duplicate_row_count:,}")
-        self._blank_cells_label.setText(f"{handle.blank_cell_count:,}")
+        # File Identity
+        sec = self._add_section("FILE")
+        sec.add_row("Name", handle.display_name)
+        sec.add_row("Sheets", f"{handle.sheet_count}")
+        sec.add_row("Active Sheet", handle.active_sheet)
+        sec.add_row("Size", handle.file_size_display)
+        sec.add_row("Modified", handle.last_modified.strftime("%Y-%m-%d %H:%M") if handle.last_modified else "-")
+        sec.add_row("Engine", handle.engine_used)
+        sec.add_row("Memory", f"{handle.memory_usage_mb} MB")
 
-        self._columns_table.setRowCount(len(handle.column_profiles))
+        # Data Quality
+        sec = self._add_section("DATA QUALITY")
+        sec.add_row("Duplicate Rows", f"{handle.duplicate_row_count:,}")
+        sec.add_row("Blank Cells", f"{handle.blank_cell_count:,}")
+        quality_pct = 0
+        total_cells = handle.row_count * handle.column_count
+        if total_cells > 0:
+            filled = total_cells - handle.blank_cell_count
+            quality_pct = round(filled / total_cells * 100, 1)
+        sec.add_row("Fill Rate", f"{quality_pct}%")
+
+        # Column Statistics Table
+        table = QTableWidget(0, len(COLUMN_HEADERS))
+        table.setHorizontalHeaderLabels(COLUMN_HEADERS)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        table.setEditTriggers(QTableWidget.NoEditTriggers)
+        table.setAlternatingRowColors(True)
+        table.verticalHeader().setDefaultSectionSize(24)
+        table.verticalHeader().hide()
+        table.setMaximumHeight(min(len(handle.column_profiles), 12) * 26 + 28)
+
         for row, profile in enumerate(handle.column_profiles):
             min_display = f"{profile.min_value:g}" if profile.min_value is not None else "-"
             max_display = f"{profile.max_value:g}" if profile.max_value is not None else "-"
@@ -124,7 +159,14 @@ class PropertiesPanel(QWidget):
                 f"{profile.duplicate_pct}%",
                 min_display,
                 max_display,
-                ", ".join(str(v) for v in profile.example_values[:3]),
+                ", ".join(str(v) for v in profile.example_values[:2]),
             ]
             for col, value in enumerate(values):
-                self._columns_table.setItem(row, col, QTableWidgetItem(value))
+                item = QTableWidgetItem(value)
+                item.setToolTip(f"{profile.name}: {value}")
+                table.setItem(row, col, item)
+
+        table_hdr = QLabel("COLUMN STATISTICS")
+        table_hdr.setStyleSheet("color: #969696; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; padding: 8px 0 4px 0; border: none; background: transparent;")
+        self._layout.insertWidget(self._layout.count() - 1, table_hdr)
+        self._layout.insertWidget(self._layout.count() - 1, table)

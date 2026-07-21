@@ -1,26 +1,13 @@
-"""
-app.ui.splash_screen
-=====================
-Startup splash screen: shows the app name/version and a live status label
-that main.py updates as it walks through dependency checks, config load,
-and plugin discovery.
-"""
-
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QFont, QPixmap
+from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPixmap
 from PySide6.QtWidgets import QSplashScreen
 
 from app.core.constants import APP_NAME, APP_VERSION
 
 
-def build_splash_pixmap(width: int = 560, height: int = 320) -> QPixmap:
-    """Programmatically draws the splash background so Phase 1 has zero
-    dependency on external image assets. Replace with a designed PNG under
-    assets/ later without touching any call site."""
-    from PySide6.QtGui import QLinearGradient, QPainter
-
+def build_splash_pixmap(width: int = 600, height: int = 360) -> QPixmap:
     pixmap = QPixmap(width, height)
     pixmap.fill(Qt.transparent)
 
@@ -28,27 +15,36 @@ def build_splash_pixmap(width: int = 560, height: int = 320) -> QPixmap:
     painter.setRenderHint(QPainter.Antialiasing)
 
     gradient = QLinearGradient(0, 0, width, height)
-    gradient.setColorAt(0.0, QColor("#0d1117"))
-    gradient.setColorAt(1.0, QColor("#161b22"))
+    gradient.setColorAt(0.0, QColor("#1e1e1e"))
+    gradient.setColorAt(0.6, QColor("#252526"))
+    gradient.setColorAt(1.0, QColor("#2d2d2d"))
     painter.setBrush(gradient)
     painter.setPen(Qt.NoPen)
-    painter.drawRoundedRect(0, 0, width, height, 12, 12)
+    painter.drawRoundedRect(0, 0, width, height, 8, 8)
 
-    painter.setPen(QColor("#3fb950"))
-    painter.setBrush(QColor("#3fb950"))
+    painter.setPen(QColor("#0078d4"))
+    painter.setBrush(QColor("#0078d4"))
     painter.drawRoundedRect(0, 0, 6, height, 3, 3)
 
-    painter.setPen(QColor("#e6edf3"))
-    painter.setFont(QFont("Segoe UI", 22, QFont.Bold))
-    painter.drawText(40, 130, APP_NAME)
+    painter.setPen(QColor("#0078d4"))
+    painter.setFont(QFont("Segoe UI", 10, QFont.Normal))
+    painter.drawText(48, 120, "Rolls-Royce Power Systems (MTU)")
 
-    painter.setPen(QColor("#8b949e"))
-    painter.setFont(QFont("Segoe UI", 11))
-    painter.drawText(40, 160, "Rolls-Royce Power Systems (MTU) - Engineering Tools")
+    painter.setPen(QColor("#ffffff"))
+    painter.setFont(QFont("Segoe UI", 28, QFont.Light))
+    painter.drawText(48, 168, APP_NAME)
 
-    painter.setPen(QColor("#58a6ff"))
+    painter.setPen(QColor("#969696"))
+    painter.setFont(QFont("Segoe UI", 12))
+    painter.drawText(48, 200, "Engineering Data Platform")
+
+    painter.setPen(QColor("#4ec9b0"))
     painter.setFont(QFont("Segoe UI", 9))
-    painter.drawText(40, height - 24, f"Version {APP_VERSION}")
+    painter.drawText(48, height - 28, f"Version {APP_VERSION}")
+
+    painter.setPen(QColor("#555555"))
+    painter.setFont(QFont("Segoe UI", 8))
+    painter.drawText(48, height - 12, "Loading...")
 
     painter.end()
     return pixmap
@@ -63,8 +59,6 @@ class StudioSplashScreen(QSplashScreen):
         self.showMessage(
             message,
             Qt.AlignBottom | Qt.AlignRight,
-            QColor("#c9d1d9"),
+            QColor("#969696"),
         )
-        # Force a repaint so the message appears even while the main thread
-        # is doing blocking startup work (config load, plugin discovery).
         self.repaint()

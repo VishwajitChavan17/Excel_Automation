@@ -19,11 +19,9 @@ import pandas as pd
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide6.QtGui import QColor
 
-NULL_HIGHLIGHT = QColor("#3d1f1f")
-DUPLICATE_HIGHLIGHT = QColor("#4a3a12")
-
-
 class PandasTableModel(QAbstractTableModel):
+    NULL_HIGHLIGHT = QColor("#3d1f1f")
+    DUPLICATE_HIGHLIGHT = QColor("#4a3a12")
     def __init__(self, df: pd.DataFrame, parent=None) -> None:
         super().__init__(parent)
         self._df = df
@@ -70,11 +68,11 @@ class PandasTableModel(QAbstractTableModel):
         if role == Qt.BackgroundRole:
             value = self._df.iat[index.row(), index.column()]
             if pd.isna(value):
-                return NULL_HIGHLIGHT
+                return self.NULL_HIGHLIGHT
             if self._duplicate_mask is not None:
                 try:
                     if bool(self._duplicate_mask.iloc[index.row()]):
-                        return DUPLICATE_HIGHLIGHT
+                        return self.DUPLICATE_HIGHLIGHT
                 except IndexError:
                     pass
         return None
