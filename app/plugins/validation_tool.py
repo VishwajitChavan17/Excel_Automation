@@ -156,8 +156,31 @@ class ValidationToolWidget(QWidget):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(splitter)
 
+        self._cleanup_done = False
+        self.destroyed.connect(self._cleanup_threads)
         self._on_selection_changed()
         self._on_rule_type_changed()
+
+    def _cleanup_threads(self) -> None:
+        self._cleanup_done = True
+        for t in self._threads:
+            try:
+                if t.isRunning():
+                    t.quit()
+                    t.wait(2000)
+            except RuntimeError:
+                pass
+        self._threads.clear()
+        if self._active_worker is not None:
+            try:
+                self._active_worker.finished.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            try:
+                self._active_worker.failed.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            self._active_worker = None
 
     def _on_selection_changed(self) -> None:
         self._column_combo.clear()
@@ -281,6 +304,8 @@ class ValidationToolWidget(QWidget):
         thread.start()
 
     def _on_run_finished(self, report) -> None:
+        if getattr(self, '_cleanup_done', False):
+            return
         thread = self._active_thread
         self._teardown_thread(thread)
         self._progress.setVisible(False)
@@ -303,6 +328,8 @@ class ValidationToolWidget(QWidget):
         logger.info("Validation finished: {} issue(s)", report.issue_count)
 
     def _on_run_failed(self, error: str) -> None:
+        if getattr(self, '_cleanup_done', False):
+            return
         thread = self._active_thread
         self._teardown_thread(thread)
         self._progress.setVisible(False)

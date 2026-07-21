@@ -126,7 +126,30 @@ class MergeFilesTab(QWidget):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(splitter)
 
+        self._cleanup_done = False
+        self.destroyed.connect(self._cleanup_threads)
         self._on_mode_changed()
+
+    def _cleanup_threads(self) -> None:
+        self._cleanup_done = True
+        for t in self._threads:
+            try:
+                if t.isRunning():
+                    t.quit()
+                    t.wait(2000)
+            except RuntimeError:
+                pass
+        self._threads.clear()
+        if self._active_worker is not None:
+            try:
+                self._active_worker.finished.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            try:
+                self._active_worker.failed.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            self._active_worker = None
 
     def _on_mode_changed(self) -> None:
         is_union = self._mode_combo.currentData() == "union"
@@ -179,6 +202,8 @@ class MergeFilesTab(QWidget):
         thread.start()
 
     def _on_merge_finished(self, result_df, report) -> None:
+        if getattr(self, '_cleanup_done', False):
+            return
         thread = self._active_thread
         self._teardown_thread(thread)
         self._progress.setVisible(False)
@@ -191,7 +216,7 @@ class MergeFilesTab(QWidget):
             f"{report.result_column_count} column(s) from {report.source_count} source(s)."
         )
         self._export_button.setEnabled(True)
-        QTimer.singleShot(0, lambda df=result_df: self._show_preview(df))
+        QTimer.singleShot(0, lambda df=result_df: self._show_preview(df) if not getattr(self, '_cleanup_done', False) else None)
 
         logger.info("Merge finished: mode={}, rows={}", report.mode, report.result_row_count)
 
@@ -204,6 +229,8 @@ class MergeFilesTab(QWidget):
         self._preview_container.addWidget(preview)
 
     def _on_merge_failed(self, error: str) -> None:
+        if getattr(self, '_cleanup_done', False):
+            return
         thread = self._active_thread
         self._teardown_thread(thread)
         self._progress.setVisible(False)
@@ -300,7 +327,30 @@ class ConsolidateFilesTab(QWidget):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(splitter)
 
+        self._cleanup_done = False
+        self.destroyed.connect(self._cleanup_threads)
         self._refresh_file_list()
+
+    def _cleanup_threads(self) -> None:
+        self._cleanup_done = True
+        for t in self._threads:
+            try:
+                if t.isRunning():
+                    t.quit()
+                    t.wait(2000)
+            except RuntimeError:
+                pass
+        self._threads.clear()
+        if self._active_worker is not None:
+            try:
+                self._active_worker.finished.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            try:
+                self._active_worker.failed.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            self._active_worker = None
 
     def _refresh_file_list(self, *_args) -> None:
         self._files_list.clear()
@@ -340,6 +390,8 @@ class ConsolidateFilesTab(QWidget):
         thread.start()
 
     def _on_consolidate_finished(self, result_df, report) -> None:
+        if getattr(self, '_cleanup_done', False):
+            return
         thread = self._active_thread
         self._teardown_thread(thread)
         self._progress.setVisible(False)
@@ -361,7 +413,7 @@ class ConsolidateFilesTab(QWidget):
             )
 
         self._export_button.setEnabled(True)
-        QTimer.singleShot(0, lambda df=result_df: self._show_preview(df))
+        QTimer.singleShot(0, lambda df=result_df: self._show_preview(df) if not getattr(self, '_cleanup_done', False) else None)
 
         logger.info(
             "Consolidation finished: {} sources, {} rows",
@@ -378,6 +430,8 @@ class ConsolidateFilesTab(QWidget):
         self._preview_container.addWidget(preview)
 
     def _on_consolidate_failed(self, error: str) -> None:
+        if getattr(self, '_cleanup_done', False):
+            return
         thread = self._active_thread
         self._teardown_thread(thread)
         self._progress.setVisible(False)

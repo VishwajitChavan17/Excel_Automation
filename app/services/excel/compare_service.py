@@ -62,7 +62,7 @@ def compare_workbooks(
 
     def _normalize(df: pd.DataFrame) -> pd.DataFrame:
         for col in key_columns:
-            series = df[col].astype(str)
+            series = df[col].fillna("__NULL__").astype(str)
             if ignore_whitespace:
                 series = series.str.strip()
             if ignore_case:

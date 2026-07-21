@@ -35,12 +35,21 @@ class UnsupportedFileTypeError(ValueError):
     pass
 
 
+class LoadError(ValueError):
+    pass
+
+
 def _sheet_names_and_visibility(file_path: Path) -> dict[str, bool]:
     """Return {sheet_name: is_hidden} using openpyxl in read-only/metadata
     mode, without loading full cell data."""
     from openpyxl import load_workbook
+    from openpyxl.utils.exceptions import InvalidFileException
 
-    wb = load_workbook(filename=str(file_path), read_only=True, data_only=True)
+    try:
+        wb = load_workbook(filename=str(file_path), read_only=True, data_only=True)
+    except (InvalidFileException, OSError) as exc:
+        logger.warning("Could not open {} for sheet visibility scan: {}", file_path.name, exc)
+        return {}
     try:
         return {ws.title: ws.sheet_state != "visible" for ws in wb.worksheets}
     finally:
@@ -195,8 +204,15 @@ def _load_delimited(
             row_count_estimate,
             large_file_threshold,
         )
-        pl_df = pl.read_csv(path, separator=sep, infer_schema_length=10_000)
-        df = pl_df.to_pandas()
+        try:
+            pl_df = pl.read_csv(path, separator=sep, infer_schema_length=10_000)
+        except Exception as exc:
+            logger.warning("Polars read_csv failed for {}, falling back to pandas: {}", path.name, exc)
+            pl_df = None
+        if pl_df is not None:
+            df = pl_df.to_pandas()
+        else:
+            df = pd.read_csv(path, sep=sep)
         engine_used = "polars"
     else:
         df = pd.read_csv(path, sep=sep)
@@ -226,7 +242,16 @@ def _load_with_pandas(
         except Exception:
             logger.warning("Could not read sheet visibility for {}", path.name, exc_info=True)
 
-    all_sheets = pd.read_excel(path, sheet_name=None, engine=engine)
+    try:
+        all_sheets = pd.read_excel(path, sheet_name=None, engine=engine)
+    except ValueError as exc:
+        msg = str(exc).lower()
+        if "encrypted" in msg or "password" in msg:
+            raise LoadError(f"'{path.name}' is password-protected. Please remove protection and try again.") from exc
+        raise LoadError(f"Failed to read '{path.name}': {exc}") from exc
+    except Exception as exc:
+        raise LoadError(f"Failed to read '{path.name}': {exc}") from exc
+
     active = sheet_name if sheet_name in all_sheets else next(iter(all_sheets))
     active_df = all_sheets[active]
 

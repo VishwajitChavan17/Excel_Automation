@@ -23,6 +23,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from loguru import logger
+
 
 @dataclass
 class SessionState:
@@ -31,12 +33,16 @@ class SessionState:
     saved_at: str = field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
 
 
-def save_session(state: SessionState, path: str | Path) -> Path:
+def save_session(state: SessionState, path: str | Path) -> Path | None:
     path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    state.saved_at = datetime.now().isoformat(timespec="seconds")
-    path.write_text(json.dumps(asdict(state), indent=2), encoding="utf-8")
-    return path
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        state.saved_at = datetime.now().isoformat(timespec="seconds")
+        path.write_text(json.dumps(asdict(state), indent=2), encoding="utf-8")
+        return path
+    except OSError as exc:
+        logger.error("SessionManager: failed to save session: {}", exc)
+        return None
 
 
 def load_session(path: str | Path) -> SessionState | None:
@@ -56,5 +62,8 @@ def load_session(path: str | Path) -> SessionState | None:
 
 def clear_session(path: str | Path) -> None:
     path = Path(path)
-    if path.exists():
-        path.unlink()
+    try:
+        if path.exists():
+            path.unlink()
+    except OSError as exc:
+        logger.error("SessionManager: failed to clear session: {}", exc)

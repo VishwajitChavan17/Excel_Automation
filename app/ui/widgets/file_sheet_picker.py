@@ -36,8 +36,19 @@ class FileSheetPicker(QWidget):
 
         registry.workbook_added.connect(self.refresh)
         registry.workbook_removed.connect(self.refresh)
+        self.destroyed.connect(self._disconnect_registry)
 
         self.refresh()
+
+    def _disconnect_registry(self) -> None:
+        try:
+            self._registry.workbook_added.disconnect(self.refresh)
+        except (TypeError, RuntimeError):
+            pass
+        try:
+            self._registry.workbook_removed.disconnect(self.refresh)
+        except (TypeError, RuntimeError):
+            pass
 
     def refresh(self, *_args) -> None:
         previous_key = self.selected_file_key()

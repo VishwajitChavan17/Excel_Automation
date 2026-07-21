@@ -64,7 +64,7 @@ def lookup_and_copy(
     def _composite_key(df: pd.DataFrame) -> pd.Series:
         key: pd.Series | None = None
         for col in match_columns:
-            s = df[col].astype(str)
+            s = df[col].fillna("__NULL__").astype(str)
             if ignore_whitespace:
                 s = s.str.strip()
             if ignore_case:
@@ -80,15 +80,15 @@ def lookup_and_copy(
     matched_mask = target_keys.isin(master_lookup.index)
 
     for col in copy_columns:
-        dest_col = col if col not in result.columns or overwrite_existing else f"{col}_copied"
         looked_up = target_keys.map(master_lookup[col])
-        if dest_col in result.columns and not overwrite_existing:
-            result[dest_col] = result[dest_col]
-        else:
-            if dest_col in result.columns:
-                result.loc[matched_mask, dest_col] = looked_up[matched_mask]
-            else:
+        if col in result.columns and not overwrite_existing:
+            dest_col = f"{col}_copied"
+            if dest_col not in result.columns:
                 result[dest_col] = looked_up
+        elif col in result.columns:
+            result.loc[matched_mask, col] = looked_up[matched_mask]
+        else:
+            result[col] = looked_up
 
     report = LookupReport(
         master_file="master",

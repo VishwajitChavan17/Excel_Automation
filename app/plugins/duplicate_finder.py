@@ -116,7 +116,30 @@ class DuplicateFinderWidget(QWidget):
         outer.addWidget(splitter)
 
         self._preview: ExcelPreviewWidget | None = None
+        self._cleanup_done = False
+        self.destroyed.connect(self._cleanup_threads)
         self._on_selection_changed()
+
+    def _cleanup_threads(self) -> None:
+        self._cleanup_done = True
+        for t in self._threads:
+            try:
+                if t.isRunning():
+                    t.quit()
+                    t.wait(2000)
+            except RuntimeError:
+                pass
+        self._threads.clear()
+        if self._active_worker is not None:
+            try:
+                self._active_worker.finished.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            try:
+                self._active_worker.failed.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            self._active_worker = None
 
     # -- selection wiring ------------------------------------------------
 
@@ -168,6 +191,8 @@ class DuplicateFinderWidget(QWidget):
         thread.start()
 
     def _on_find_finished(self, report, mask) -> None:
+        if getattr(self, '_cleanup_done', False):
+            return
         import pandas as pd
 
         thread = self._active_thread
@@ -191,6 +216,8 @@ class DuplicateFinderWidget(QWidget):
         logger.info("Duplicate Finder: {} duplicates found", report.duplicate_row_count)
 
     def _on_find_failed(self, error: str) -> None:
+        if getattr(self, '_cleanup_done', False):
+            return
         thread = self._active_thread
         self._teardown_thread(thread)
         self._progress.setVisible(False)

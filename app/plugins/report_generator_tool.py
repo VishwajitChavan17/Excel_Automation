@@ -60,9 +60,9 @@ class ReportGeneratorWidget(QWidget):
             formats_row.addWidget(cb)
         summary_layout.addLayout(formats_row)
 
-        generate_button = QPushButton("Generate Summary Report")
-        generate_button.clicked.connect(self._on_generate_clicked)
-        summary_layout.addWidget(generate_button)
+        self._generate_button = QPushButton("Generate Summary Report")
+        self._generate_button.clicked.connect(self._on_generate_clicked)
+        summary_layout.addWidget(self._generate_button)
 
         self._progress = QProgressBar()
         self._progress.setVisible(False)
@@ -88,6 +88,30 @@ class ReportGeneratorWidget(QWidget):
         self._summary_label.setWordWrap(True)
         layout.addWidget(self._summary_label)
 
+        self._cleanup_done = False
+        self.destroyed.connect(self._cleanup_threads)
+
+    def _cleanup_threads(self) -> None:
+        self._cleanup_done = True
+        for t in self._threads:
+            try:
+                if t.isRunning():
+                    t.quit()
+                    t.wait(2000)
+            except RuntimeError:
+                pass
+        self._threads.clear()
+        if self._active_worker is not None:
+            try:
+                self._active_worker.finished.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            try:
+                self._active_worker.failed.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            self._active_worker = None
+
     def _on_generate_clicked(self) -> None:
         handle = self._registry.get_handle(self._picker.selected_file_key() or "")
         if handle is None:
@@ -107,6 +131,7 @@ class ReportGeneratorWidget(QWidget):
             QMessageBox.warning(self, "Report Generator", "Select at least one output format.")
             return
 
+        self._generate_button.setEnabled(False)
         worker = ReportGenerationWorker(handle, paths.exports_dir(), formats)
         thread = start_worker(self, worker)
         self._active_thread = thread
@@ -121,9 +146,12 @@ class ReportGeneratorWidget(QWidget):
         thread.start()
 
     def _on_generate_finished(self, written_paths) -> None:
+        if getattr(self, '_cleanup_done', False):
+            return
         thread = self._active_thread
         self._teardown_thread(thread)
         self._progress.setVisible(False)
+        self._generate_button.setEnabled(True)
 
         for path in written_paths:
             self._generated_list.addItem(str(path))
@@ -134,9 +162,12 @@ class ReportGeneratorWidget(QWidget):
         logger.info("Report generation finished: {} file(s)", len(written_paths))
 
     def _on_generate_failed(self, error: str) -> None:
+        if getattr(self, '_cleanup_done', False):
+            return
         thread = self._active_thread
         self._teardown_thread(thread)
         self._progress.setVisible(False)
+        self._generate_button.setEnabled(True)
         QMessageBox.critical(self, "Report Generator", f"Report generation failed:\n{error}")
 
     def _teardown_thread(self, thread) -> None:

@@ -34,6 +34,8 @@ from PySide6.QtCore import QObject, Signal
 from app.services.excel.loader_service import reprofile_for_sheet
 from app.services.excel.models import WorkbookHandle
 
+MAX_HISTORY = 100
+
 
 @dataclass
 class HistoryEntry:
@@ -97,6 +99,8 @@ class WorkbookRegistry(QObject):
             previous = self._sheets[key].get(sheet_name)
             if previous is not None:
                 self._undo_stack.append(HistoryEntry(key, sheet_name, description, previous))
+                if len(self._undo_stack) > MAX_HISTORY:
+                    self._undo_stack.pop(0)
                 self._redo_stack.clear()
                 self.history_changed.emit()
             self.mutation_recorded.emit(key, sheet_name, description)

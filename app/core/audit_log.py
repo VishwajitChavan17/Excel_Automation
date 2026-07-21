@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from loguru import logger
+
 
 @dataclass
 class AuditEntry:
@@ -38,35 +40,44 @@ class AuditLog:
 
     def __init__(self, db_path: str | Path) -> None:
         self._db_path = Path(db_path)
-        self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._init_schema()
+        try:
+            self._db_path.parent.mkdir(parents=True, exist_ok=True)
+            self._init_schema()
+        except OSError as exc:
+            logger.error("AuditLog: failed to initialise at {}: {}", self._db_path, exc)
 
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(str(self._db_path))
 
     def _init_schema(self) -> None:
-        with self._connect() as conn:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS audit_entries (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp TEXT NOT NULL,
-                    file_key TEXT NOT NULL,
-                    sheet_name TEXT NOT NULL,
-                    operation TEXT NOT NULL
+        try:
+            with self._connect() as conn:
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS audit_entries (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        timestamp TEXT NOT NULL,
+                        file_key TEXT NOT NULL,
+                        sheet_name TEXT NOT NULL,
+                        operation TEXT NOT NULL
+                    )
+                    """
                 )
-                """
-            )
-            conn.commit()
+                conn.commit()
+        except sqlite3.Error as exc:
+            logger.error("AuditLog: schema init failed: {}", exc)
 
     def log(self, file_key: str, sheet_name: str, operation: str, *, timestamp: datetime | None = None) -> None:
         ts = (timestamp or datetime.now()).isoformat(timespec="seconds")
-        with self._connect() as conn:
-            conn.execute(
-                "INSERT INTO audit_entries (timestamp, file_key, sheet_name, operation) VALUES (?, ?, ?, ?)",
-                (ts, file_key, sheet_name, operation),
-            )
-            conn.commit()
+        try:
+            with self._connect() as conn:
+                conn.execute(
+                    "INSERT INTO audit_entries (timestamp, file_key, sheet_name, operation) VALUES (?, ?, ?, ?)",
+                    (ts, file_key, sheet_name, operation),
+                )
+                conn.commit()
+        except sqlite3.Error as exc:
+            logger.error("AuditLog: failed to log entry: {}", exc)
 
     def query(self, *, limit: int = 500, search: str | None = None) -> list[AuditEntry]:
         """Most-recent-first. `search` filters on file_key/sheet_name/operation
@@ -80,32 +91,47 @@ class AuditLog:
         sql += " ORDER BY id DESC LIMIT ?"
         params = params + (limit,)
 
-        with self._connect() as conn:
-            rows = conn.execute(sql, params).fetchall()
-        return [AuditEntry(id=r[0], timestamp=r[1], file_key=r[2], sheet_name=r[3], operation=r[4]) for r in rows]
+        try:
+            with self._connect() as conn:
+                rows = conn.execute(sql, params).fetchall()
+            return [AuditEntry(id=r[0], timestamp=r[1], file_key=r[2], sheet_name=r[3], operation=r[4]) for r in rows]
+        except sqlite3.Error as exc:
+            logger.error("AuditLog: query failed: {}", exc)
+            return []
 
     def count(self) -> int:
-        with self._connect() as conn:
-            (n,) = conn.execute("SELECT COUNT(*) FROM audit_entries").fetchone()
-        return n
+        try:
+            with self._connect() as conn:
+                (n,) = conn.execute("SELECT COUNT(*) FROM audit_entries").fetchone()
+            return n
+        except sqlite3.Error as exc:
+            logger.error("AuditLog: count failed: {}", exc)
+            return 0
 
     def clear(self) -> None:
-        with self._connect() as conn:
-            conn.execute("DELETE FROM audit_entries")
-            conn.commit()
+        try:
+            with self._connect() as conn:
+                conn.execute("DELETE FROM audit_entries")
+                conn.commit()
+        except sqlite3.Error as exc:
+            logger.error("AuditLog: clear failed: {}", exc)
 
     def prune_older_than(self, days: int) -> int:
         """Delete entries older than `days` days; returns the number removed."""
         cutoff = datetime.now().timestamp() - days * 86400
-        with self._connect() as conn:
-            rows = conn.execute("SELECT id, timestamp FROM audit_entries").fetchall()
-            to_delete = [
-                row_id for row_id, ts in rows if datetime.fromisoformat(ts).timestamp() < cutoff
-            ]
-            if to_delete:
-                conn.executemany("DELETE FROM audit_entries WHERE id = ?", [(i,) for i in to_delete])
-                conn.commit()
-        return len(to_delete)
+        try:
+            with self._connect() as conn:
+                rows = conn.execute("SELECT id, timestamp FROM audit_entries").fetchall()
+                to_delete = [
+                    row_id for row_id, ts in rows if datetime.fromisoformat(ts).timestamp() < cutoff
+                ]
+                if to_delete:
+                    conn.executemany("DELETE FROM audit_entries WHERE id = ?", [(i,) for i in to_delete])
+                    conn.commit()
+                return len(to_delete)
+        except (sqlite3.Error, ValueError, TypeError) as exc:
+            logger.error("AuditLog: prune failed: {}", exc)
+            return 0
 
 
 def export_audit_log_excel(entries: list[AuditEntry], output_path: str | Path) -> Path:

@@ -131,7 +131,30 @@ class LookupCopyWidget(QWidget):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(splitter)
 
+        self._cleanup_done = False
+        self.destroyed.connect(self._cleanup_threads)
         self._refresh_columns()
+
+    def _cleanup_threads(self) -> None:
+        self._cleanup_done = True
+        for t in self._threads:
+            try:
+                if t.isRunning():
+                    t.quit()
+                    t.wait(2000)
+            except RuntimeError:
+                pass
+        self._threads.clear()
+        if self._active_worker is not None:
+            try:
+                self._active_worker.finished.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            try:
+                self._active_worker.failed.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            self._active_worker = None
 
     def _refresh_columns(self) -> None:
         master_df = self._master_picker.selected_dataframe()
@@ -196,6 +219,8 @@ class LookupCopyWidget(QWidget):
         thread.start()
 
     def _on_run_finished(self, updated_df, report) -> None:
+        if getattr(self, '_cleanup_done', False):
+            return
         thread = self._active_thread
         self._teardown_thread(thread)
         self._progress.setVisible(False)
@@ -210,11 +235,7 @@ class LookupCopyWidget(QWidget):
         self._apply_button.setEnabled(True)
         self._export_button.setEnabled(True)
 
-        # Defer building the (fairly heavy) preview widget to the next event
-        # loop tick rather than constructing it synchronously inside this
-        # cross-thread queued slot -- avoids deep widget construction inside
-        # a signal-handler call stack originating from a worker thread.
-        QTimer.singleShot(0, lambda df=updated_df: self._show_preview(df))
+        QTimer.singleShot(0, lambda df=updated_df: self._show_preview(df) if not getattr(self, '_cleanup_done', False) else None)
 
         logger.info(
             "Lookup & Copy finished: {} matched, {} unmatched",
@@ -231,6 +252,8 @@ class LookupCopyWidget(QWidget):
         self._preview_container.addWidget(preview)
 
     def _on_run_failed(self, error: str) -> None:
+        if getattr(self, '_cleanup_done', False):
+            return
         thread = self._active_thread
         self._teardown_thread(thread)
         self._progress.setVisible(False)

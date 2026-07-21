@@ -74,9 +74,12 @@ def snapshot_sheets(
             logger.exception("Autosave failed for {} / {}", file_key, sheet_name)
 
     manifest_path = directory / MANIFEST_FILENAME
-    manifest_path.write_text(
-        json.dumps([asdict(e) for e in entries], indent=2), encoding="utf-8"
-    )
+    try:
+        manifest_path.write_text(
+            json.dumps([asdict(e) for e in entries], indent=2), encoding="utf-8"
+        )
+    except OSError as exc:
+        logger.error("Autosave: failed to write manifest: {}", exc)
     logger.debug("Autosave: {} sheet(s) snapshotted to {}", len(entries), directory)
     return manifest_path
 

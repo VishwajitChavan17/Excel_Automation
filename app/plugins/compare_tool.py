@@ -122,7 +122,30 @@ class CompareToolWidget(QWidget):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(splitter)
 
+        self._cleanup_done = False
+        self.destroyed.connect(self._cleanup_threads)
         self._refresh_key_columns()
+
+    def _cleanup_threads(self) -> None:
+        self._cleanup_done = True
+        for t in self._threads:
+            try:
+                if t.isRunning():
+                    t.quit()
+                    t.wait(2000)
+            except RuntimeError:
+                pass
+        self._threads.clear()
+        if self._active_worker is not None:
+            try:
+                self._active_worker.finished.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            try:
+                self._active_worker.failed.disconnect()
+            except (TypeError, RuntimeError):
+                pass
+            self._active_worker = None
 
     def _refresh_key_columns(self) -> None:
         master_df = self._master_picker.selected_dataframe()
@@ -169,6 +192,8 @@ class CompareToolWidget(QWidget):
         thread.start()
 
     def _on_compare_finished(self, result) -> None:
+        if getattr(self, '_cleanup_done', False):
+            return
         thread = self._active_thread
         self._teardown_thread(thread)
         self._progress.setVisible(False)
@@ -195,6 +220,8 @@ class CompareToolWidget(QWidget):
         )
 
     def _on_compare_failed(self, error: str) -> None:
+        if getattr(self, '_cleanup_done', False):
+            return
         thread = self._active_thread
         self._teardown_thread(thread)
         self._progress.setVisible(False)
