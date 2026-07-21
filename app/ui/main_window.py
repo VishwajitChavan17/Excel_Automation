@@ -33,7 +33,7 @@ from app.core.autosave_manager import (
 )
 from app.core.config_manager import ConfigManager
 from app.core.plugin_manager import PluginManager
-from app.core.session_manager import SessionState, save_session
+from app.core.session_manager import SessionState, load_session, save_session
 from app.core.workbook_registry import WorkbookRegistry
 from app.services.excel.models import WorkbookHandle
 from app.ui.home_dashboard import HomeDashboard
@@ -578,7 +578,10 @@ class MainWindow(QMainWindow):
             if confirm != QMessageBox.Yes:
                 return
         self._tab_file_keys.pop(index, None)
+        w = self._workspace.widget(index)
         self._workspace.removeTab(index)
+        if w is not None:
+            w.deleteLater()
 
     # ── Activity Logging ───────────────────────────────────────────────
 
@@ -744,6 +747,13 @@ class MainWindow(QMainWindow):
         )
 
     def closeEvent(self, event) -> None:
+        for thread in self._open_threads[:]:
+            if thread.isRunning():
+                thread.quit()
+                thread.wait(2000)
+        self._open_threads.clear()
+        self._open_workers.clear()
+
         self._config.set("window.width", self.width())
         self._config.set("window.height", self.height())
         self._config.set("window.maximized", self.isMaximized())

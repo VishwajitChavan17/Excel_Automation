@@ -145,6 +145,10 @@ class Ribbon(QTabWidget):
         self._pages: dict[str, RibbonTabContent] = {}
 
     def build_from_plugins(self, plugins_by_category: dict[str, list[Plugin]]) -> None:
+        for i in range(self.count()):
+            w = self.widget(i)
+            if w:
+                w.deleteLater()
         self.clear()
         self._pages.clear()
 

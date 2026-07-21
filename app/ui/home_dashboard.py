@@ -56,19 +56,22 @@ class ActivityFeed(QWidget):
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.setSpacing(2)
 
-        empty = QLabel("No recent activity")
-        empty.setStyleSheet("color: #555555; font-size: 11px; padding: 12px 0;")
-        self._empty = empty
-        self._layout.addWidget(empty)
-
-    def set_entries(self, entries: list[tuple[str, str, str]]) -> None:
+    def _clear(self) -> None:
         while self._layout.count():
             item = self._layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
+            w = item.widget()
+            if w:
+                w.setParent(None)
+                w.deleteLater()
+            del item
+
+    def set_entries(self, entries: list[tuple[str, str, str]]) -> None:
+        self._clear()
 
         if not entries:
-            self._layout.addWidget(self._empty)
+            empty = QLabel("No recent activity")
+            empty.setStyleSheet("color: #555555; font-size: 11px; padding: 12px 0;")
+            self._layout.addWidget(empty)
             return
 
         for time_str, desc, typ in entries[-20:]:
@@ -212,6 +215,7 @@ class HomeDashboard(QWidget):
             item = layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
+            del item
         for title, value, accent in items:
             layout.addWidget(_metric_card(title, value, accent))
 
@@ -255,6 +259,7 @@ class HomeDashboard(QWidget):
             item = self._recent_list.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
+            del item
 
         if not files:
             empty = QLabel("No recent files. Open a file to get started.")

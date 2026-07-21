@@ -43,13 +43,11 @@ def start_worker(owner: QObject, worker: QObject) -> QThread:
     thread.started.connect(worker.run)
 
     def _cleanup() -> None:
-        thread.quit()
-        thread.wait()
+        if thread.isRunning():
+            thread.quit()
+            thread.wait(2000)
 
-    # Whatever "done" signal the worker has (finished/failed) should call
-    # _cleanup -- callers connect that themselves since signal names vary
-    # (finished vs finished+failed). We still guard against leaks by tying
-    # thread cleanup to its own finished signal.
+    thread.finished.connect(_cleanup)
     thread.finished.connect(thread.deleteLater)
 
     return thread

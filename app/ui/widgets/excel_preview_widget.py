@@ -136,7 +136,11 @@ class ExcelPreviewWidget(QWidget):
         self._proxy.setFilterCaseSensitivity(Qt.CaseInsensitive)
         self._proxy.setFilterKeyColumn(-1)
 
+        old_model = self._table_view.model()
         self._table_view.setModel(self._proxy)
+        if old_model is not None:
+            old_model.deleteLater()
+
         self._table_view.selectionModel().currentChanged.connect(self._on_current_changed)
         self._proxy.rowsInserted.connect(self._emit_row_counts)
         self._proxy.rowsRemoved.connect(self._emit_row_counts)

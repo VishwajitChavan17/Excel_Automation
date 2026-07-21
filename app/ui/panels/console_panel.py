@@ -14,7 +14,6 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QPlainTextEdit,
     QPushButton,
-    QSplitter,
     QTabWidget,
     QVBoxLayout,
     QWidget,

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from PySide6.QtGui import QColor
-
 from app.ui.icons import CATEGORY_COLORS
 
 ACCENT = "#0078d4"
