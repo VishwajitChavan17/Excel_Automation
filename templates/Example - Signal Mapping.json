@@ -1,0 +1,14 @@
+[
+  {
+    "source": "Signal Name",
+    "destination": "Signal"
+  },
+  {
+    "source": "Description",
+    "destination": "Comment"
+  },
+  {
+    "source": "Unit",
+    "destination": "Engineering Unit"
+  }
+]

@@ -1,0 +1,25 @@
+2026-07-17 15:04:42.804 | INFO     | app.core.logging_setup:configure_logging:71 | Logging initialized. Log directory: /Users/vishwajitchavan/Desktop/Excel Automation/ExcelAutomationStudio 6/logs
+2026-07-17 15:04:42.805 | INFO     | __main__:main:70 | Starting Excel Automation Studio v1.0.0
+2026-07-17 15:04:59.536 | INFO     | app.core.config_manager:load:96 | No config file found, writing defaults to /Users/vishwajitchavan/Desktop/Excel Automation/ExcelAutomationStudio 6/config/settings.yaml
+2026-07-17 15:04:59.556 | INFO     | app.core.plugin_manager:_instantiate_and_load:115 | Loaded plugin 'transform.column_mapper' (Column Mapper) v1.0.0
+2026-07-17 15:04:59.560 | INFO     | app.core.plugin_manager:_instantiate_and_load:115 | Loaded plugin 'compare.excel_compare' (Compare Excel) v1.0.0
+2026-07-17 15:04:59.563 | INFO     | app.core.plugin_manager:_instantiate_and_load:115 | Loaded plugin 'excel.duplicate_finder' (Duplicate Finder) v1.0.0
+2026-07-17 15:04:59.564 | INFO     | app.core.plugin_manager:_instantiate_and_load:115 | Loaded plugin 'home.dashboard' (Welcome) v2.0.0
+2026-07-17 15:04:59.565 | INFO     | app.core.plugin_manager:_instantiate_and_load:115 | Loaded plugin 'import.open_files' (Open Files) v1.0.0
+2026-07-17 15:04:59.567 | INFO     | app.core.plugin_manager:_instantiate_and_load:115 | Loaded plugin 'transform.lookup_copy' (Lookup && Copy Values) v1.0.0
+2026-07-17 15:04:59.570 | INFO     | app.core.plugin_manager:_instantiate_and_load:115 | Loaded plugin 'merge.excel_merge' (Merge Files) v1.0.0
+2026-07-17 15:04:59.573 | INFO     | app.core.plugin_manager:_instantiate_and_load:115 | Loaded plugin 'reports.generator' (Report Generator) v1.0.0
+2026-07-17 15:04:59.574 | INFO     | app.core.plugin_manager:_instantiate_and_load:115 | Loaded plugin 'settings.panel' (Application Settings) v1.0.0
+2026-07-17 15:04:59.576 | INFO     | app.core.plugin_manager:_instantiate_and_load:115 | Loaded plugin 'templates.engine' (Template Manager) v1.0.0
+2026-07-17 15:04:59.578 | INFO     | app.core.plugin_manager:_instantiate_and_load:115 | Loaded plugin 'validation.rule_checker' (Validation Rules) v1.0.0
+2026-07-17 15:04:59.582 | INFO     | app.core.plugin_manager:_instantiate_and_load:115 | Loaded plugin 'automation.workflow_recorder' (Workflow Recorder) v1.0.0
+2026-07-17 15:04:59.582 | INFO     | app.core.plugin_manager:discover_and_load:60 | Plugin discovery complete: 13 module(s) scanned, 12 plugin(s) loaded, 0 error(s).
+2026-07-17 15:04:59.741 | INFO     | app.ui.main_window:__init__:100 | MainWindow initialized.
+2026-07-17 15:04:59.742 | INFO     | __main__:main:109 | Startup complete.
+2026-07-17 15:08:41.771 | INFO     | app.services.excel.loader_service:load_workbook_all_sheets:149 | Loading workbook: /Users/vishwajitchavan/Downloads/Employees_Master.xlsx
+2026-07-17 15:08:41.822 | INFO     | app.workers.file_load_worker:run:61 | Loaded Employees_Master.xlsx (1 sheet(s), active 20 rows x 7 cols) via pandas engine
+2026-07-17 15:10:38.844 | INFO     | app.services.excel.loader_service:load_workbook_all_sheets:149 | Loading workbook: /Users/vishwajitchavan/Downloads/Employees_Update.xlsx
+2026-07-17 15:10:38.871 | INFO     | app.workers.file_load_worker:run:61 | Loaded Employees_Update.xlsx (1 sheet(s), active 21 rows x 4 cols) via pandas engine
+2026-07-17 15:11:05.589 | INFO     | app.services.excel.merge_service:union_merge:57 | Union merge: 2 source(s) -> 41 rows
+2026-07-17 15:11:05.609 | INFO     | app.plugins.merge_tool:_on_merge_finished:196 | Merge finished: mode=union, rows=41
+2026-07-17 15:11:21.311 | INFO     | app.services.excel.merge_service:export_result:158 | Merge/consolidation result written to /Users/vishwajitchavan/Desktop/Excel Automation/Merged_Output_20260717_151110.xlsx

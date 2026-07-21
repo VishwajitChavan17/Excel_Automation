@@ -1,0 +1,26 @@
+[
+  {
+    "rule_type": "required",
+    "column": "Name",
+    "parameter": null,
+    "description": ""
+  },
+  {
+    "rule_type": "required",
+    "column": "EmployeeID",
+    "parameter": null,
+    "description": ""
+  },
+  {
+    "rule_type": "no_negative",
+    "column": "Salary",
+    "parameter": null,
+    "description": ""
+  },
+  {
+    "rule_type": "unique",
+    "column": "EmployeeID",
+    "parameter": null,
+    "description": ""
+  }
+]

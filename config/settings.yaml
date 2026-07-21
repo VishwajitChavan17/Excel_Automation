@@ -1,0 +1,26 @@
+app:
+  theme: dark
+  language: en
+  auto_save_interval_seconds: 120
+  auto_save_enabled: true
+  confirm_before_overwrite: true
+  restore_last_session: true
+window:
+  width: 1600
+  height: 950
+  maximized: true
+  docked_panels:
+    project_explorer: true
+    properties: true
+    console: true
+performance:
+  large_file_row_threshold: 100000
+  max_worker_threads: 4
+  use_polars_for_large_files: true
+recent_files:
+- /Users/vishwajitchavan/Downloads/Employees_Update.xlsx
+- /Users/vishwajitchavan/Downloads/Employees_Master.xlsx
+recent_projects: []
+plugins:
+  enabled: []
+  disabled: []

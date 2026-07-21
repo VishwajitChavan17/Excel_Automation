@@ -1,0 +1,32 @@
+# Excel Automation Studio -- default configuration reference.
+# This file is NOT read at runtime; it documents the schema.
+# The live, user-editable copy is generated at config/settings.yaml on
+# first run (see app/core/config_manager.py).
+
+app:
+  theme: dark                     # dark | light
+  language: en
+  auto_save_interval_seconds: 120
+  confirm_before_overwrite: true
+  restore_last_session: true
+
+window:
+  width: 1600
+  height: 950
+  maximized: true
+  docked_panels:
+    project_explorer: true
+    properties: true
+    console: true
+
+performance:
+  large_file_row_threshold: 100000
+  max_worker_threads: 4
+  use_polars_for_large_files: true
+
+recent_files: []
+recent_projects: []
+
+plugins:
+  enabled: []     # empty = all discovered plugins enabled
+  disabled: []    # plugin_ids to explicitly disable, e.g. "excel.duplicate_finder"

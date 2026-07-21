@@ -1,0 +1,28 @@
+{
+  "name": "Example - Fleet Dedup and Validate",
+  "steps": [
+    {
+      "step_type": "remove_duplicates",
+      "parameters": {
+        "columns": [
+          "VIN",
+          "Engine Number"
+        ],
+        "keep": "first"
+      },
+      "description": "Remove duplicates on VIN, Engine Number (keep=first)"
+    },
+    {
+      "step_type": "validate",
+      "parameters": {
+        "rules": [
+          {
+            "rule_type": "required",
+            "column": "Test Result"
+          }
+        ]
+      },
+      "description": "Validate 'Test Result' (Required (not blank))"
+    }
+  ]
+}
